@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-  workflow_dispatch:   # Manual trigger (button in GitHub Actions)
+  workflow_dispatch:
   schedule:
     - cron: "0 */6 * * *"   # Run every 6 hours
 
@@ -23,17 +23,21 @@ jobs:
           git clone --depth 1 https://github.com/xplshn/via
           cd via && go run ./via-nohist.go 8080 &
 
-      - name: Set environment variables
-        id: env
+      - name: Wait for server to start
         run: |
-          echo "PORT=8080" >> $GITHUB_ENV
+          # Wait for the server to start
+          until curl -s http://localhost:8080 > /dev/null; do
+            echo "Waiting for server to start..."
+            sleep 2
+          done
+          echo "Server started successfully"
 
       - name: Expose server using Serveo
         id: expose
         run: |
           # Start SSH tunnel to Serveo, forwarding port 8080
           ssh -o StrictHostKeyChecking=no -R 80:localhost:8080 serveo.net > serveo.log 2>&1 &
-          sleep 5 # Allow some time for Serveo to set up
+          sleep 10 # Allow some time for Serveo to set up
           # Extract the Serveo URL from the logs
           SERVEO_URL=$(grep -o 'https://[a-zA-Z0-9.-]*' serveo.log)
           echo "SERVEO_URL=$SERVEO_URL" >> $GITHUB_ENV
@@ -51,7 +55,7 @@ jobs:
       - name: Check if server is alive and log any failure
         run: |
           sleep 10
-          if ! pgrep -f "via-nohist.go"; then
+          if ! curl -s http://localhost:8080 > /dev/null; then
             echo "Server crashed" > failure.log
             echo "Server failed to start or crashed." > README.md
             git add failure.log README.md
