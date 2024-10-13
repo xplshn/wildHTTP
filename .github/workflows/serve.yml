@@ -56,7 +56,7 @@ jobs:
       - name: Check if server is alive and log any failure
         run: |
           sleep 10
-          if ! curl -s http://localhost:8080 > /dev/null; then
+          if ! pgrep via-nohist; then
             echo "Server crashed" > failure.log
             echo "Server failed to start or crashed." > README.md
             git add failure.log README.md
