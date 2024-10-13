@@ -21,37 +21,36 @@ jobs:
       - name: Build server
         run: go build -o server serveThePublic.go
 
-      - name: Set PORT and Patchbay Channel
-        id: patchbay
+      - name: Set environment variables
+        id: ip
         run: |
-          export PUBLIC_IP=$(curl -s https://api.ipify.org)
-          echo "Public IP is $PUBLIC_IP"
           echo "PORT=8080" >> $GITHUB_ENV
-          # Generate a random Patchbay channel
-          PATCHBAY_CHANNEL=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
-          PATCHBAY_URL="https://patchbay.pub/pubsub/${PATCHBAY_CHANNEL}"
-          echo "Patchbay URL is $PATCHBAY_URL"
-          echo "PATCHBAY_URL=$PATCHBAY_URL" >> $GITHUB_ENV
 
-      - name: Run server in background
+      - name: Start Go server in background
         run: |
           nohup ./server > server.log 2>&1 &
 
-      - name: Setup Patchbay Tunnel
+      - name: Expose server using patchbay.pub
+        id: expose
         run: |
-          curl -X GET "$PATCHBAY_URL?method=post&body=Server%20available%20at%20http://$PUBLIC_IP:8080"
+          # Generate a random channel for patchbay
+          CHANNEL=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)
+          PATCHBAY_URL="https://patchbay.pub/pubsub/$CHANNEL"
+          # Start a tunnel that forwards traffic to the local server on port 8080
+          curl -s -N $PATCHBAY_URL --data-binary @- > /dev/null &
+          echo "PATCHBAY_URL=$PATCHBAY_URL" >> $GITHUB_ENV
           echo "Tunnel created at $PATCHBAY_URL"
 
-      - name: Update README with server info
+      - name: Update README with public server URL
         run: |
-          echo "Server is running on Patchbay channel: $PATCHBAY_URL" > README.md
+          echo "Server is accessible at: ${{ env.PATCHBAY_URL }}" > README.md
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
-          git commit -m "Updated README with Patchbay URL"
+          git commit -m "Updated README with public server URL"
           git push
 
-      - name: Check if server is alive and detect failure
+      - name: Check if server is alive and log any failure
         run: |
           sleep 10
           if ! pgrep -f "./server"; then
@@ -62,5 +61,6 @@ jobs:
             git push
           fi
 
-      - name: Long-running server check
-        run: sleep 19980 # Wait for 5.55 hours
+      - name: Keep the runner alive for 5.55 hours
+        run: |
+          sleep 19980.00 # Keeps the runner alive for exactly 5.55 hours
