@@ -17,39 +17,43 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v5
-       # with:
-       #   go-version: '1.20'
-
-      #- name: Install dependencies # No deps for now. Just STD.
-      #  run: go mod tidy
 
       - name: Build server
         run: go build -o server serveThePublic.go
 
-      - name: Get Public IP and Port
-        id: ip
+      - name: Set PORT and Patchbay Channel
+        id: patchbay
         run: |
           export PUBLIC_IP=$(curl -s https://api.ipify.org)
           echo "Public IP is $PUBLIC_IP"
-          echo "PUBLIC_IP=$PUBLIC_IP" >> $GITHUB_ENV
           echo "PORT=8080" >> $GITHUB_ENV
+          # Generate a random Patchbay channel
+          PATCHBAY_CHANNEL=$(cat /proc/sys/kernel/random/uuid | tr -d '-')
+          PATCHBAY_URL="https://patchbay.pub/pubsub/${PATCHBAY_CHANNEL}"
+          echo "Patchbay URL is $PATCHBAY_URL"
+          echo "PATCHBAY_URL=$PATCHBAY_URL" >> $GITHUB_ENV
 
       - name: Run server in background
         run: |
           nohup ./server > server.log 2>&1 &
-          echo "Server is running on http://$PUBLIC_IP:8080" > README.md
 
-      - name: Commit and push README update
+      - name: Setup Patchbay Tunnel
         run: |
+          curl -X GET "$PATCHBAY_URL?method=post&body=Server%20available%20at%20http://$PUBLIC_IP:8080"
+          echo "Tunnel created at $PATCHBAY_URL"
+
+      - name: Update README with server info
+        run: |
+          echo "Server is running on Patchbay channel: $PATCHBAY_URL" > README.md
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
-          git commit -m "Updated README with server info"
+          git commit -m "Updated README with Patchbay URL"
           git push
 
       - name: Check if server is alive and detect failure
         run: |
-          sleep 10 # WHY? IDK. DOES IT WORK? IDK. DOES IT HELP? IDK. AM I SANE? IDK. DOES THE TERMINAL CURSOR BLINK? IT DOES NOT. SHOULD IT? IDK.
+          sleep 10
           if ! pgrep -f "./server"; then
             echo "Server crashed" > failure.log
             echo "Server failed to start or crashed." > README.md
@@ -58,7 +62,5 @@ jobs:
             git push
           fi
 
-      - name: Check if server is alive and detect failure
-        run: |
-          sleep 19980.00 # Runs for exactly 5.55 hours
-          #wget -qO- "https://raw.githubusercontent.com/xplshn/dbin/master/stubdl" | sh -s -- run timer 19980.00 # Runs for exactly 5.55 hours # FAILS TO OPEN TTY SADLY
+      - name: Long-running server check
+        run: sleep 19980 # Wait for 5.55 hours
