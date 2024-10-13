@@ -1,0 +1,52 @@
+name: Web Service Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-server:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Build server
+        run: go build -o server serveThePublic.go
+
+      - name: Create public directory
+        run: mkdir -p ./public && echo '<h1>Hello from GitHub Runner</h1>' > ./public/index.html
+
+      - name: Run server in background
+        run: |
+          nohup ./server > server.log 2>&1 &
+          echo "Server is running on port 8080" >> README.md
+
+      - name: Commit and push README update
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Updated README with server info"
+          git push
+
+      - name: Detect server failure and create a file
+        run: |
+          sleep 30
+          if ! pgrep -f "./server"; then
+            echo "Server crashed" > failure.log
+            echo "Server failed to start or crashed." >> README.md
+            git add failure.log README.md
+            git commit -m "Added failure log"
+            git push
+          fi
