@@ -16,18 +16,15 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.20'
+        uses: actions/setup-go@v5
+       # with:
+       #   go-version: '1.20'
 
-      - name: Install dependencies
-        run: go mod tidy
+      #- name: Install dependencies # No deps for now. Just STD.
+      #  run: go mod tidy
 
       - name: Build server
-        run: go build -o server main.go
-
-      - name: Create public directory
-        run: mkdir -p ./public && echo '<h1>Hello from GitHub Runner</h1>' > ./public/index.html
+        run: go build -o server serveThePublic.go
 
       - name: Get Public IP and Port
         id: ip
