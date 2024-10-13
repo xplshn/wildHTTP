@@ -4,35 +4,43 @@ on:
   push:
     branches:
       - master
-
-  workflow_dispatch:
+  workflow_dispatch:   # Manual trigger (button in GitHub Actions)
+  schedule:
+    - cron: "0 */6 * * *"   # Run every 6 hours
 
 jobs:
   run-server:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Go
-        uses: actions/setup-go@v5
-       # with:
-       #   go-version: '*'
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
 
-      #- name: Install dependencies
-      #  run: go mod tidy
+      - name: Install dependencies
+        run: go mod tidy
 
       - name: Build server
-        run: go build -o server serveThePublic.go
+        run: go build -o server main.go
 
       - name: Create public directory
         run: mkdir -p ./public && echo '<h1>Hello from GitHub Runner</h1>' > ./public/index.html
 
+      - name: Get Public IP and Port
+        id: ip
+        run: |
+          export PUBLIC_IP=$(curl -s https://api.ipify.org)
+          echo "Public IP is $PUBLIC_IP"
+          echo "PUBLIC_IP=$PUBLIC_IP" >> $GITHUB_ENV
+          echo "PORT=8080" >> $GITHUB_ENV
+
       - name: Run server in background
         run: |
           nohup ./server > server.log 2>&1 &
-          echo "Server is running on port 8080" >> README.md
+          echo "Server is running on http://$PUBLIC_IP:8080" >> README.md
 
       - name: Commit and push README update
         run: |
@@ -42,7 +50,7 @@ jobs:
           git commit -m "Updated README with server info"
           git push
 
-      - name: Detect server failure and create a file
+      - name: Check if server is alive and detect failure
         run: |
           sleep 30
           if ! pgrep -f "./server"; then
@@ -51,4 +59,3 @@ jobs:
             git add failure.log README.md
             git commit -m "Added failure log"
             git push
-          fi
