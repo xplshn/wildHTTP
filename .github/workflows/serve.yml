@@ -37,7 +37,7 @@ jobs:
       - name: Run server in background
         run: |
           nohup ./server > server.log 2>&1 &
-          echo "Server is running on http://$PUBLIC_IP:8080" >> README.md
+          echo "Server is running on http://$PUBLIC_IP:8080" > README.md
 
       - name: Commit and push README update
         run: |
@@ -52,7 +52,7 @@ jobs:
           sleep 10 # WHY? IDK. DOES IT WORK? IDK. DOES IT HELP? IDK. AM I SANE? IDK. DOES THE TERMINAL CURSOR BLINK? IT DOES NOT. SHOULD IT? IDK.
           if ! pgrep -f "./server"; then
             echo "Server crashed" > failure.log
-            echo "Server failed to start or crashed." >> README.md
+            echo "Server failed to start or crashed." > README.md
             git add failure.log README.md
             git commit -m "Added failure log"
             git push
