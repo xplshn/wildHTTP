@@ -59,6 +59,7 @@ jobs:
             git add failure.log README.md
             git commit -m "Added failure log"
             git push
+          fi
 
       - name: Keep the runner alive for 5.55 hours
         run: |
