@@ -60,4 +60,5 @@ jobs:
 
       - name: Check if server is alive and detect failure
         run: |
-          wget -qO- "https://raw.githubusercontent.com/xplshn/dbin/master/stubdl" | sh -s -- run timer 19980.00 # Runs for exactly 5.55 hours
+          sleep 19980.00 # Runs for exactly 5.55 hours
+          #wget -qO- "https://raw.githubusercontent.com/xplshn/dbin/master/stubdl" | sh -s -- run timer 19980.00 # Runs for exactly 5.55 hours # FAILS TO OPEN TTY SADLY
