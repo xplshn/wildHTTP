@@ -21,12 +21,12 @@ jobs:
       - name: Clone via repository
         run: |
           git clone --depth 1 https://github.com/xplshn/via
-          cd via && go run ./via-nohist.go 8001 &
+          cd via && go run ./via-nohist.go 8080 &
 
       - name: Wait for server to start
         run: |
           ## Wait for the server to start
-          #until curl -N http://localhost:8001/status; do
+          #until curl -N http://localhost:8080/status; do
           #  echo "Waiting for server to start..."
           #  sleep 2
           #done
@@ -36,8 +36,8 @@ jobs:
       - name: Expose server using Serveo
         id: expose
         run: |
-          # Start SSH tunnel to Serveo, forwarding port 8001
-          ssh -o StrictHostKeyChecking=no -R 80:localhost:8001 serveo.net > serveo.log 2>&1 &
+          # Start SSH tunnel to Serveo, forwarding port 8080
+          ssh -o StrictHostKeyChecking=no -R 80:localhost:8080 serveo.net > serveo.log 2>&1 &
           sleep 10 # Allow some time for Serveo to set up
           # Extract the Serveo URL from the logs
           SERVEO_URL=$(grep -o 'https://[a-zA-Z0-9.-]*' serveo.log)
@@ -56,7 +56,7 @@ jobs:
       - name: Check if server is alive and log any failure
         run: |
           sleep 10
-          if ! curl -s http://localhost:8001 > /dev/null; then
+          if ! curl -s http://localhost:8080 > /dev/null; then
             echo "Server crashed" > failure.log
             echo "Server failed to start or crashed." > README.md
             git add failure.log README.md
