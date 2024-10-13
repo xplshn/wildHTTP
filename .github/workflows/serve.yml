@@ -18,17 +18,15 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
 
-      - name: Build server
-        run: go build -o server serveThePublic.go
+      - name: Clone via repository
+        run: |
+          git clone --depth 1 https://github.com/xplshn/via
+          cd via && go run ./via-nohist.go 8080 &
 
       - name: Set environment variables
         id: env
         run: |
           echo "PORT=8080" >> $GITHUB_ENV
-
-      - name: Start Go server in background
-        run: |
-          nohup ./server > server.log 2>&1 &
 
       - name: Expose server using Serveo
         id: expose
@@ -53,13 +51,18 @@ jobs:
       - name: Check if server is alive and log any failure
         run: |
           sleep 10
-          if ! pgrep -f "./server"; then
+          if ! pgrep -f "via-nohist.go"; then
             echo "Server crashed" > failure.log
             echo "Server failed to start or crashed." > README.md
             git add failure.log README.md
             git commit -m "Added failure log"
             git push
           fi
+
+      - name: Clean up
+        run: |
+          # Remove the cloned repository
+          rm -rf via
 
       - name: Keep the runner alive for 5.55 hours
         run: |
