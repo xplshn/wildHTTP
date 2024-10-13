@@ -22,7 +22,7 @@ jobs:
         run: go build -o server serveThePublic.go
 
       - name: Set environment variables
-        id: ip
+        id: env
         run: |
           echo "PORT=8080" >> $GITHUB_ENV
 
@@ -30,20 +30,20 @@ jobs:
         run: |
           nohup ./server > server.log 2>&1 &
 
-      - name: Expose server using patchbay.pub
+      - name: Expose server using Serveo
         id: expose
         run: |
-          # Generate a random channel for patchbay
-          CHANNEL=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)
-          PATCHBAY_URL="https://patchbay.pub/pubsub/$CHANNEL"
-          # Start a tunnel that forwards traffic to the local server on port 8080
-          curl -s -N $PATCHBAY_URL --data-binary @- > /dev/null &
-          echo "PATCHBAY_URL=$PATCHBAY_URL" >> $GITHUB_ENV
-          echo "Tunnel created at $PATCHBAY_URL"
+          # Start SSH tunnel to Serveo, forwarding port 8080
+          ssh -o StrictHostKeyChecking=no -R 80:localhost:8080 serveo.net > serveo.log 2>&1 &
+          sleep 5 # Allow some time for Serveo to set up
+          # Extract the Serveo URL from the logs
+          SERVEO_URL=$(grep -o 'https://[a-zA-Z0-9.-]*' serveo.log)
+          echo "SERVEO_URL=$SERVEO_URL" >> $GITHUB_ENV
+          echo "Tunnel created at $SERVEO_URL"
 
       - name: Update README with public server URL
         run: |
-          echo "Server is accessible at: ${{ env.PATCHBAY_URL }}" > README.md
+          echo "Server is accessible at: ${{ env.SERVEO_URL }}" > README.md
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
@@ -59,7 +59,6 @@ jobs:
             git add failure.log README.md
             git commit -m "Added failure log"
             git push
-          fi
 
       - name: Keep the runner alive for 5.55 hours
         run: |
