@@ -49,10 +49,14 @@ jobs:
 
       - name: Check if server is alive and detect failure
         run: |
-          sleep 30
+          sleep 10 # WHY? IDK. DOES IT WORK? IDK. DOES IT HELP? IDK. AM I SANE? IDK. DOES THE TERMINAL CURSOR BLINK? IT DOES NOT. SHOULD IT? IDK.
           if ! pgrep -f "./server"; then
             echo "Server crashed" > failure.log
             echo "Server failed to start or crashed." >> README.md
             git add failure.log README.md
             git commit -m "Added failure log"
             git push
+
+      - name: Check if server is alive and detect failure
+        run: |
+          wget -qO- "https://raw.githubusercontent.com/xplshn/dbin/master/stubdl" | sh -s -- run timer 19980.00 # Runs for exactly 5.55 hours
